@@ -3,93 +3,103 @@
 #define SDA P0_1
 void InitTimer(){
 	TMOD=0x01;
-	T0=0x00;
+	TH0=0;
+	TL0=0;
 	TF0=0;
 	TR0=0;
 }
 
-void Delay(unsigned int i){
-	T0=0xffff-i;
-	TR0=1;
-	while(TF0!=1);
-	TR0=0;
-	TF0=0;
+void IIC_Init(){
+	SCL=1;
+	SDA=1;
 }
 
 void IIC_Delay(){
-	Delay(5);
+	TH0=0xff;
+	TL0=0x25;
+	TR0=1;
+	while(TF0==0);
+	TR0=0;
+	TF0=0;
 }
 
 void IIC_Start(){
-	SCL=1;
 	SDA=1;
+	IIC_Delay();
+	SCL=1;
 	IIC_Delay();
 	SDA=0;
 	IIC_Delay();
-	SCL=0;
 }
 
 void IIC_Stop(){
-	SCL=0;
 	SDA=0;
 	IIC_Delay();
+	SCL=1;
+	IIC_Delay();
 	SDA=1;
 	IIC_Delay();
 }
 
-void IIC_SendAck(){
-	SDA=0;
-	SCL=1;
-	IIC_Delay();
-	SCL=0;
-}
-
-void IIC_SendNack(){
-	SDA=1;
-	SCL=1;
-	IIC_Delay();
-	SCL=0;
-}
-
-
-unsigned int IIC_WaitAck(){
-	unsigned int tmp=0;
+unsigned char IIC_Response(){
+	unsigned int i=0,isAck=0;;
 	SCL=1;
 	SDA=1;
-	while(SDA==1 && tmp<=255)tmp++;
-	if(SDA==1){
-		IIC_Stop();
-		return 0;
-	}
+	IIC_Delay();
+	while(SDA==1 && i<255)i++;
+	isAck=SDA;
 	SCL=0;
-	return 1;
+	IIC_Delay();
+	return isAck;
 }
 
-unsigned int IIC_Write(unsigned int data){
-	int i;
-	for(i=0;i<8;i++){
-		if((data&0x80)==0)
-			SDA=0;
-		else
-			SDA=1;
+void IIC_Ack(unsigned int isack){
+	if(isack==1){
+		SDA=0;
+		IIC_Delay();
+		SCL=1;
+		IIC_Delay();
 		SCL=0;
+		SDA=1;
+	}else{
+		SDA=1;
 		IIC_Delay();
 		SCL=1;
-		SDA<<=1;
-	}
-	return IIC_WaitAck();
+		IIC_Delay();
+		SCL=0;
+		SDA=0;
+	}	
 }
-unsigned int IIC_Read(){
-	int i=0,data=0;
+
+unsigned char IIC_Write(unsigned char data){
+	unsigned char i=0;
+	unsigned char tmp=data;
+	SCL=0;
+	IIC_Delay();
 	for(i=0;i<8;i++){
+		tmp<<=1;
+		SDA=CY;		
 		IIC_Delay();
 		SCL=1;
-		data|=SDA;
-		data<<=1;		
-		SCL=0; 
+		IIC_Delay();
+		SCL=0;
 	}
-	IIC_SendAck();
+	return IIC_Response();
+}
+
+unsigned char IIC_Read(unsigned char isAck){
+	unsigned int i=0,data=0;
+	SCL=0;
+	SDA=1;
+	IIC_Delay();
+	for(i=0;i<8;i++){
+		SCL=1;
+		IIC_Delay();
+		data<<=1;
+		data|=SDA;
+		IIC_Delay();
+		SCL=0;
+	}	
+	IIC_Ack(isAck);
 	return data;
 }
-
-

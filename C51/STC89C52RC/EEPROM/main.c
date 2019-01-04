@@ -4,7 +4,7 @@
 void EEPROM_Write(unsigned int data){
 	IIC_Start();
 	IIC_Write(0xA0);
-	IIC_Write(0x00);
+	IIC_Write(3);
 	IIC_Write(data);
 	IIC_Stop();
 }
@@ -12,20 +12,21 @@ void EEPROM_Write(unsigned int data){
 unsigned int EEPROM_Read(){
 	unsigned int data;
 	IIC_Start();
-	IIC_Write(0xA1);
-	IIC_Write(0x00);
+	IIC_Write(0xA0);
+	IIC_Write(3);
 	IIC_Start();
-	data=IIC_Read();
+	IIC_Write(0xA1);
+	data=IIC_Read(1);
 	IIC_Stop();
 	return data;
 }
 
 void main(){
-	unsigned int data;
 	InitTimer();
-	EEPROM_Write(0xAA);
+	IIC_Init();
+	EEPROM_Write(0xaa);
 	IIC_Delay();
-	data = EEPROM_Read();
-	LED = data;
+	LED= EEPROM_Read();
 	while(1);
 }
+
